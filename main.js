@@ -18,7 +18,7 @@ Render.run(render);
 const runner = Runner.create();
 Runner.run(runner, engine);
 
-
+//一些初始化数值
 var width, height, groundHeight = 30, groundColor = '#101d21', wallWidth = 10, wallColor = '#161d21';
 
 //1.宽度高度的计算
@@ -96,13 +96,27 @@ class fruitLevelCount {
         this.count = (this.count + 1) % 5;
         return this.arr[this.count];
     }
-}
+}//这里搞一个class是为了点击生成不同等级的水果（虽然可能没啥用）
 const counter = new fruitLevelCount();
 document.addEventListener('click', () => {
     const x = mouse.absolute.x;
     let fruitLevel = counter.getFruitLevel();
     createFruit(x, fruitLevel);
 });
+document.addEventListener('touchstart', function (event) {
+    event.preventDefault();
+    const touch = event.touches[0];
+    const simulatedEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        screenX: touch.screenX,
+        screenY: touch.screenY,
+    });
+    document.dispatchEvent(simulatedEvent);
+});//内置的mouse不会因为touch而改变，我又懒得去转换一下对应在canvas里面的坐标
 //水果碰撞
 Matter.Events.on(engine, 'collisionStart', (event) => {
     const pairs = event.pairs;
