@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style>
-        *{
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        body{
+
+        body {
             display: flex;
             /* height: 100vh; */
             flex-direction: column;
@@ -18,10 +20,133 @@
             align-items: center;
             background-color: #3087b3;
         }
+
+        #floatdiv {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
     </style>
 </head>
+
 <body>
+    <div id="floatdiv"><span id="remainTimePresenter">111</span></div>
+    <div>
+        <p>占位</p>
+    </div>
+    <div id="container"></div>
     <script src=".\matter.min.js"></script>
+    <script>
+        function debounce(func, wait = 0, options = {}) {
+            const defaultOptions = {
+                leading: false,
+                trailing: true,
+                maxWait: 0,
+            };
+            const finalOptions = { ...defaultOptions, ...options };
+
+            let timer = null;
+            let maxWaitTimer = null;
+            let lastArgs = null;
+            let lastThis = null;
+            let lastInvokeTime = 0;
+
+            const invoke = () => {
+                func.apply(lastThis, lastArgs);
+                lastArgs = lastThis = null;
+                lastInvokeTime = Date.now();
+            };
+
+            const shouldInvoke = () => {
+                const now = Date.now();
+                return finalOptions.maxWait > 0 && (now - lastInvokeTime >= finalOptions.maxWait);
+            };//用于maxWait
+
+            return function (...args) {
+                const now = Date.now();
+                lastArgs = args;
+                lastThis = this;
+
+                if (!lastInvokeTime) lastInvokeTime = now;
+
+                if (finalOptions.leading && !timer) {
+                    invoke();
+                }
+                if (timer) clearTimeout(timer);
+
+                timer = setTimeout(() => {
+                    if (finalOptions.trailing) {
+                        invoke();
+                    }
+                    timer = null;
+                }, wait);
+
+                if (finalOptions.maxWait > 0 && !maxWaitTimer) {
+                    maxWaitTimer = setTimeout(() => {
+                        if (shouldInvoke()) {
+                            invoke();
+                        }
+                        maxWaitTimer = null;
+                        clearTimeout(timer);
+                        timer = null;
+                    }, finalOptions.maxWait);
+                }
+            };
+        }
+        function throttle(func, wait = 0, options = {}) {
+            const defaultOptions = {
+                leading: true,
+                trailing: true,
+            };
+            const finalOptions = { ...defaultOptions, ...options };
+
+            let timer = null;
+            let lastArgs;
+            let lastThis;
+            let lastCallTime = 0;
+
+            const invoke = () => {
+                func.apply(lastThis, lastArgs);
+                lastArgs = lastThis = null;
+            };
+
+            return function (...args) {
+                const now = Date.now();
+                lastArgs = args;
+                lastThis = this;
+
+                if (!finalOptions.leading && lastCallTime === 0) {
+                    lastCallTime = now;
+                }
+
+                const remaining = wait - (now - lastCallTime);
+
+                if (remaining <= 0 || remaining > wait) {
+                    if (timer) {
+                        clearTimeout(timer);
+                        timer = null;
+                    }
+                    lastCallTime = now;
+                    invoke();
+                } else if (finalOptions.trailing && !timer) {
+                    timer = setTimeout(() => {
+                        lastCallTime = finalOptions.leading ? Date.now() : 0;
+                        timer = null;
+                        if (finalOptions.trailing) invoke();
+                    }, remaining);
+                }
+            };
+        }
+    </script>
     <script src=".\main.js"></script>
+    <script>
+        /** @type {HTMLCanvasElement} */
+        // const canvas=document.getElementById("container").firstChild;
+        // const ctx=canvas.getContext("2d");
+        // ctx.fillStyle="#ff0000";
+        // ctx.fillRect(10,10,50,50);
+    </script>
 </body>
+
 </html>

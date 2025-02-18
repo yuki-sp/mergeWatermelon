@@ -3,7 +3,7 @@ const { Engine, Render, Runner, World, Bodies, Body, Mouse, MouseConstraint } = 
 // 创建引擎和渲染器
 const engine = Engine.create();
 const render = Render.create({
-    element: document.body,
+    element: document.getElementById("container"),
     engine: engine,
     options: {
         width: calcBorder()[0],
@@ -20,6 +20,7 @@ Runner.run(runner, engine);
 
 //一些初始化数值
 var width, height, groundHeight = 30, groundColor = '#101d21', wallWidth = 10, wallColor = '#161d21';
+var state='initing';
 
 //1.宽度高度的计算
 function calcBorder() {
@@ -72,6 +73,7 @@ function getFruitStyle(level) {
     return colors[level - 1]
 }//生成水果的样式（不知道准备生成图片来着）
 function createFruit(x, level, y = judgeLineHeight) {
+    if(state == 'ending')return;
     const r = getRadius(level);
     const fruit = Bodies.circle(x, y, r, {
         restitution: 0.5,
@@ -83,6 +85,7 @@ function createFruit(x, level, y = judgeLineHeight) {
     });
     World.add(engine.world, fruit);
 }
+const createFruit1=throttle(createFruit,500,{'leading': true, 'trailing': false});
 
 //4.事件处理（鼠标点击和水果碰撞）
 //鼠标点击
@@ -101,7 +104,7 @@ const counter = new fruitLevelCount();
 document.addEventListener('click', () => {
     const x = mouse.absolute.x;
     let fruitLevel = counter.getFruitLevel();
-    createFruit(x, fruitLevel);
+    createFruit1(x, fruitLevel);
 });
 document.addEventListener('touchstart', function (event) {
     event.preventDefault();
@@ -119,12 +122,13 @@ document.addEventListener('touchstart', function (event) {
 });//内置的mouse不会因为touch而改变，我又懒得去转换一下对应在canvas里面的坐标
 //水果碰撞
 Matter.Events.on(engine, 'collisionStart', (event) => {
+    if(state == 'ending')return;
     const pairs = event.pairs;
     pairs.forEach(pair => {
         const { bodyA, bodyB } = pair;
         if (bodyA.label === 'fruit' && bodyB.label === 'fruit' && !bodyA.isMerged && !bodyB.isMerged) {
-            if ((bodyA.level === bodyB.level)&&bodyA.level!=5) {
-                const newLevel = (bodyA.level + 1) ;
+            if ((bodyA.level === bodyB.level) && bodyA.level != 5) {
+                const newLevel = (bodyA.level + 1);
                 const newX = (bodyA.position.x + bodyB.position.x) / 2;
                 const newY = (bodyA.position.y + bodyB.position.y) / 2;
                 // 标记为已合成,防止还没移除又碰撞
@@ -137,8 +141,53 @@ Matter.Events.on(engine, 'collisionStart', (event) => {
     });
 });
 
+//5.游戏结束判定
+// 每帧绘制判定线
+// Render.lookAt(render, {
+//     min: { x: 0, y: 0 },
+//     max: { x: calcBorder()[0], y: calcBorder()[1] }
+// });
+// Render.on(render, 'afterRender', () => {
+//     const ctx = render.context;
+//     ctx.beginPath();
+//     ctx.moveTo(0, thresholdY);
+//     ctx.lineTo(render.options.width, thresholdY);
+//     ctx.strokeStyle = '#ff0000';
+//     ctx.lineWidth = 3;
+//     ctx.stroke();
+// });
+const fruitTimers = new Map();
+const remainTimePresenter = document.getElementById('remainTimePresenter');
+function gameover() {
+    alert("gameover");
+    state='ending';
+}
+function remainTimePresent(time){
+    remainTimePresenter.innerHTML = `还有${time}秒`;
+}
+Matter.Events.on(engine, 'beforeUpdate', () => {
+    if(state == 'ending')return;
+    const now = Date.now();
+    const fruits = engine.world.bodies.filter(body => body.label === 'fruit');
+    fruits.forEach(fruit => {
+        const y = fruit.position.y;
+        if (y < judgeLineHeight) {
+            if (fruitTimers.has(fruit.id)) {
+                const duration = now - fruitTimers.get(fruit.id);
 
+                //这里要利用函数处理一下，保证是最大值
+                remainTimePresenter.innerHTML = `还有${5-duration / 1000}秒`;
+                if (duration >= 5000) gameover();
 
+            } else {
+                fruitTimers.set(fruit.id, now);
+            }
+        } else {
+            fruitTimers.delete(fruit);
+        }
+
+    })
+});
 
 
 //n.用户自定义设置：
