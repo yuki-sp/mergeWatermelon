@@ -20,7 +20,7 @@ Runner.run(runner, engine);
 
 //一些初始化数值
 var width, height, groundHeight = 30, groundColor = '#101d21', wallWidth = 10, wallColor = '#161d21';
-var state='initing';
+var state = 'initing';
 
 //1.宽度高度的计算
 function calcBorder() {
@@ -41,7 +41,7 @@ function calcBorder() {
     return [width, height];
 }
 
-//2.添加墙壁和地面
+//2.绘制墙壁和地面以及判定线
 const ground = Bodies.rectangle(width / 2, height - groundHeight / 2, width, groundHeight, {
     isStatic: true,
     render: {
@@ -62,9 +62,19 @@ const rightWall = Bodies.rectangle(width - wallWidth / 2, height / 2, wallWidth,
     }
 });
 World.add(engine.world, [ground, leftWall, rightWall]);
+// 每帧绘制判定线
+Matter.Events.on(render, 'afterRender', function () {
+    const context = render.context;
+    context.strokeStyle = 'red';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(wallWidth, judgeLineHeight);
+    context.lineTo(calcBorder()[0] - wallWidth, judgeLineHeight);
+    context.stroke();
+});
 
 //3.生成水果! important
-var level1Radius = 10, levelUpTimes = 20, judgeLineHeight = 200;
+var level1Radius = 10, levelUpTimes = 20, judgeLineHeight = 100;
 function getRadius(level) {
     return level * levelUpTimes + level1Radius;
 }//获取半径（没啥大作用）
@@ -73,8 +83,9 @@ function getFruitStyle(level) {
     return colors[level - 1]
 }//生成水果的样式（不知道准备生成图片来着）
 function createFruit(x, level, y = judgeLineHeight) {
-    if(state == 'ending')return;
+    if (state == 'ending') return;
     const r = getRadius(level);
+    y -= r;
     const fruit = Bodies.circle(x, y, r, {
         restitution: 0.5,
         render: {
@@ -84,8 +95,9 @@ function createFruit(x, level, y = judgeLineHeight) {
         level: level//方便同等级合成
     });
     World.add(engine.world, fruit);
+    return fruit.id;
 }
-const createFruit1=throttle(createFruit,400,{'leading': true, 'trailing': false});
+const createFruit1 = throttle(createFruit, 400, { 'leading': true, 'trailing': false });
 
 //4.事件处理（鼠标点击和水果碰撞）
 //鼠标点击
@@ -101,11 +113,30 @@ class fruitLevelCount {
     }
 }//这里搞一个class是为了点击生成不同等级的水果（虽然可能没啥用）
 const counter = new fruitLevelCount();
-document.addEventListener('click', () => {
+let currentFruit = null;
+document.addEventListener('mousedown', () => {
     const x = mouse.absolute.x;
     let fruitLevel = counter.getFruitLevel();
-    createFruit1(x, fruitLevel);
+    let id = createFruit(x, fruitLevel);
+    currentFruit = engine.world.bodies.filter(body => body.label === 'fruit' && body.id == id)[0];
+    Matter.Body.setStatic(currentFruit, true);
+    currentFruit.label = 'generatingFruit';
+    state = 'startGenerateFruit';
 });
+document.addEventListener('mousemove', () => {
+    if (state != 'startGenerateFruit') return;
+    if (currentFruit) {
+        Matter.Body.setPosition(currentFruit, { x: mouse.absolute.x, y: currentFruit.position.y });
+    }
+})
+document.addEventListener('mouseup', () => {
+    if (state != 'startGenerateFruit') return;
+    if (currentFruit) {
+        Matter.Body.setStatic(currentFruit, false);
+    }
+    currentFruit.label = 'fruit';
+    state = 'endGenerate';
+})
 document.addEventListener('touchstart', function (event) {
     event.preventDefault();
     const touch = event.touches[0];
@@ -122,7 +153,7 @@ document.addEventListener('touchstart', function (event) {
 });//内置的mouse不会因为touch而改变，我又懒得去转换一下对应在canvas里面的坐标
 //水果碰撞
 Matter.Events.on(engine, 'collisionStart', (event) => {
-    if(state == 'ending')return;
+    if (state == 'ending') return;
     const pairs = event.pairs;
     pairs.forEach(pair => {
         const { bodyA, bodyB } = pair;
@@ -142,48 +173,29 @@ Matter.Events.on(engine, 'collisionStart', (event) => {
 });
 
 //5.游戏结束判定
-// 每帧绘制判定线
-Matter.Events.on(render, 'afterRender', function() {
-    const context = render.context;
-
-    // 设置判定线的样式
-    context.strokeStyle = 'red';
-    context.lineWidth = 2;
-
-    // 设定判定线的坐标
-    const x1 = 0;
-    const y1 = 100;
-    const x2 = 300;
-    const y2 = 100;
-
-    // 绘制判定线
-    context.beginPath();
-    context.moveTo(wallWidth, judgeLineHeight);
-    context.lineTo(calcBorder()[0]-wallWidth, judgeLineHeight);
-    context.stroke();
-});
 
 const fruitTimers = new Map();
 const remainTimePresenter = document.getElementById('remainTimePresenter');
 function gameover() {
     alert("gameover");
-    state='ending';
+    state = 'ending';
 }
-function remainTimePresent(time){
+function remainTimePresent(time) {
     remainTimePresenter.innerHTML = `还有${time}秒`;
 }
 Matter.Events.on(engine, 'beforeUpdate', () => {
-    if(state == 'ending')return;
+    if (state == 'ending') return;
     const now = Date.now();
     const fruits = engine.world.bodies.filter(body => body.label === 'fruit');
     fruits.forEach(fruit => {
         const y = fruit.position.y;
-        if (y < judgeLineHeight) {
+        const r = getRadius(fruit.level);
+        if (y-r < judgeLineHeight) {
             if (fruitTimers.has(fruit.id)) {
                 const duration = now - fruitTimers.get(fruit.id);
 
                 //这里要利用函数处理一下，保证是最大值
-                remainTimePresenter.innerHTML = `还有${5-duration / 1000}秒`;
+                remainTimePresenter.innerHTML = `还有${5 - duration / 1000}秒`;
                 if (duration >= 5000) gameover();
 
             } else {
