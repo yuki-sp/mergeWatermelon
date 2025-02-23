@@ -80,12 +80,12 @@ function createFruit(x, level, y = judgeLineHeight) {
         render: {
             fillStyle: getFruitStyle(level)
         },
-        label: 'fruit',//标记一下是水果，方便合成
+        label: 'fruit',//标记一下是水果，方便合成以及结束判定
         level: level//方便同等级合成
     });
     World.add(engine.world, fruit);
 }
-const createFruit1=throttle(createFruit,500,{'leading': true, 'trailing': false});
+const createFruit1=throttle(createFruit,400,{'leading': true, 'trailing': false});
 
 //4.事件处理（鼠标点击和水果碰撞）
 //鼠标点击
@@ -143,19 +143,26 @@ Matter.Events.on(engine, 'collisionStart', (event) => {
 
 //5.游戏结束判定
 // 每帧绘制判定线
-// Render.lookAt(render, {
-//     min: { x: 0, y: 0 },
-//     max: { x: calcBorder()[0], y: calcBorder()[1] }
-// });
-// Render.on(render, 'afterRender', () => {
-//     const ctx = render.context;
-//     ctx.beginPath();
-//     ctx.moveTo(0, thresholdY);
-//     ctx.lineTo(render.options.width, thresholdY);
-//     ctx.strokeStyle = '#ff0000';
-//     ctx.lineWidth = 3;
-//     ctx.stroke();
-// });
+Matter.Events.on(render, 'afterRender', function() {
+    const context = render.context;
+
+    // 设置判定线的样式
+    context.strokeStyle = 'red';
+    context.lineWidth = 2;
+
+    // 设定判定线的坐标
+    const x1 = 0;
+    const y1 = 100;
+    const x2 = 300;
+    const y2 = 100;
+
+    // 绘制判定线
+    context.beginPath();
+    context.moveTo(wallWidth, judgeLineHeight);
+    context.lineTo(calcBorder()[0]-wallWidth, judgeLineHeight);
+    context.stroke();
+});
+
 const fruitTimers = new Map();
 const remainTimePresenter = document.getElementById('remainTimePresenter');
 function gameover() {
