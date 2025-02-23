@@ -179,6 +179,16 @@ const remainTimePresenter = document.getElementById('remainTimePresenter');
 function gameover() {
     alert("gameover");
     state = 'ending';
+    engine.world.bodies.filter(body=>body.label==='fruit'||body.label==='generatingFruit').forEach(fruit=>{
+        World.remove(engine.world, fruit);
+    });
+    remainTimePresenter.innerHTML="点我再来一局";
+    remainTimePresenter.classList.add('floatdiv');
+    remainTimePresenter.addEventListener('click',()=>{
+        state='initing';
+        remainTimePresenter.classList.remove('floatdiv');
+        remainTimePresenter.innerHTML="再来一局，加油！"
+    })
 }
 function remainTimePresent(time) {
     remainTimePresenter.innerHTML = `还有${time}秒`;
