@@ -48,7 +48,6 @@ const ground = Bodies.rectangle(width / 2, height - groundHeight / 2, width, gro
         fillStyle: groundColor
     }
 });
-
 const leftWall = Bodies.rectangle(wallWidth / 2, height / 2, wallWidth, height, {
     isStatic: true,
     render: {
@@ -75,6 +74,13 @@ Matter.Events.on(render, 'afterRender', function () {
 
 //3.生成水果! important
 var level1Radius = 10, levelUpTimes = 20, judgeLineHeight = 100;
+const sizes={
+    1:146,
+    2:196,
+    3:281,
+    4:545,
+    5:754
+}
 function getRadius(level) {
     return level * levelUpTimes + level1Radius;
 }//获取半径（没啥大作用）
@@ -82,6 +88,13 @@ function getFruitStyle(level) {
     const colors = ['#ff7675', '#74b9ff', '#55efc4', '#ffeaa7', '#a29bfe'];
     return colors[level - 1]
 }//生成水果的样式（不知道准备生成图片来着）
+function getTexture(level){
+    const pictures=["./1.png","./orange2.png","./kiwifruit3.png","./halfMelon4.png","./bigMelon5.png"]
+    return pictures[level-1]
+}
+function getScale(level){
+    return getRadius(level)
+}
 function createFruit(x, level, y = judgeLineHeight) {
     if (state == 'ending') return;
     const r = getRadius(level);
@@ -89,7 +102,12 @@ function createFruit(x, level, y = judgeLineHeight) {
     const fruit = Bodies.circle(x, y, r, {
         restitution: 0.5,
         render: {
-            fillStyle: getFruitStyle(level)
+            // fillStyle: getFruitStyle(level),
+            sprite:{
+                texture:getTexture(level),
+                xScale:0.4,
+                yScale:0.4,
+            }
         },
         label: 'fruit',//标记一下是水果，方便合成以及结束判定
         level: level//方便同等级合成
