@@ -93,7 +93,7 @@ function getTexture(level){
     return pictures[level-1]
 }
 function getScale(level){
-    return getRadius(level)
+    return getRadius(level)/sizes[level]*2;
 }
 function createFruit(x, level, y = judgeLineHeight) {
     if (state == 'ending') return;
@@ -105,8 +105,8 @@ function createFruit(x, level, y = judgeLineHeight) {
             // fillStyle: getFruitStyle(level),
             sprite:{
                 texture:getTexture(level),
-                xScale:0.4,
-                yScale:0.4,
+                xScale:getScale(level),
+                yScale:getScale(level),
             }
         },
         label: 'fruit',//标记一下是水果，方便合成以及结束判定
